@@ -3,6 +3,7 @@ sudo apt-get update &&
 sudo apt-get install python-cheetah git-core -y &&
 wget http://sourceforge.net/projects/bananapi/files/unrar_5.2.6-1_armhf.deb &&
 sudo dpkg -i unrar_5.2.6-1_armhf.deb &&
+sudo rm unrar_5.2.6-1_armhf.deb &&
 sudo git clone https://github.com/SiCKRAGETV/SickRage.git /opt/sickrage &&
 sudo chown -R osmc:osmc /opt/sickrage &&
 touch sickrage.service &&
