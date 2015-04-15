@@ -13,6 +13,11 @@ transmission_password = None
 download_dir = None
 incomplete_dir = None
 
+unrar_pkg = 'unrar_5.2.6-1_armhf.deb'
+unrar_url = 'http://sourceforge.net/projects/bananapi/files/' + unrar_pkg
+
+sr_repo = 'https://github.com/SiCKRAGETV/SickRage.git'
+sr_path = '/opt/sickrage'
 sr_service = """[Unit]
 Description=Sickrage daemon
 
@@ -23,8 +28,15 @@ Restart=always
 [Install]
 WantedBy=default.target
 """
-cp_service = """
 
+cp_repo = 'http://github.com/RuudBurger/CouchPotatoServer'
+cp_path = '/opt/CouchPotato'
+cp_service = """[Unit]
+ExecStart=/usr/bin/python /opt/CouchPotato/CouchPotato.py
+Restart=always
+
+[Install]
+WantedBy=default.target
 """
 
 
@@ -46,8 +58,8 @@ def main():
         p.wait()
         if p.returncode == 0:
 		if do_transmission(transmission_username, transmission_password, download_dir, incomplete_dir):
-			if do_sickrage():
-				#do_couchpotato()
+			if do_sickrage(unrar_url, unrar_pkg, sr_repo, sr_path):
+				do_couchpotato(cp_repo, cp_path)
 
 def validate_path(path):
 	#check whether the directory exists or not and if i have write permissions
@@ -87,7 +99,6 @@ def replace_regex(file_path, pattern, subst):
 	shutil.move(abs_path, file_path)
 
 def do_transmission(username, password, download, incomplete):
-	#transmission installation and configuration procedure
 	p = subprocess.Popen(['sudo', 'apt-get', 'install', 'transmission-daemon', '-y'])
 	p.wait()
 	if p.returncode == 0:
@@ -128,39 +139,39 @@ def do_transmission(username, password, download, incomplete):
 		else: sys.exit("Error: unable to stop transmission service")
 	else: sys.exit("Error: unable to install transmission-daemon")
 
-def do_sickrage():
+def do_sickrage(unrar_url, unrar_pkg, sr_repo, sr_path):
 	p = subprocess.Popen(['sudo', 'apt-get', 'install', 'python-cheetah', 'git-core', '-y'])
         p.wait()
         if p.returncode == 0:
-		p = subprocess.Popen(['wget', 'http://sourceforge.net/projects/bananapi/files/unrar_5.2.6-1_armhf.deb'])
+		p = subprocess.Popen(['wget', unrar_url])
 		p.wait()
 		if p.returncode == 0:
-			p = subprocess.Popen(['sudo', 'dpkg', '-i', 'unrar_5.2.6-1_armhf.deb'])
+			p = subprocess.Popen(['sudo', 'dpkg', '-i', unrar_pkg])
 			p.wait()
 			if p.returncode == 0:
-				p = subprocess.Popen(['sudo', 'rm', 'unrar_5.2.6-1_armhf.deb'])
+				p = subprocess.Popen(['sudo', 'rm', unrar_pkg])
 				p.wait()
 				if p.returncode == 0:
-					p = subprocess.Popen(['sudo', 'git', 'clone', 'https://github.com/SiCKRAGETV/SickRage.git', '/opt/sickrage'])
+					p = subprocess.Popen(['sudo', 'git', 'clone', sr_repo, sr_path])
 					p.wait()
 					if p.returncode == 0:
-						p = subprocess.Popen(['sudo', 'chown', '-R', 'osmc:osmc', '/opt/sickrage'])
+						p = subprocess.Popen(['sudo', 'chown', '-R', 'osmc:osmc', sr_path])
 						p.wait()
 						if p.returncode == 0:
-							fname = 'sickrage.service'
+							sr_service = 'sickrage.service'
 							with open(fname, 'w') as fout:
 								fout.write(sr_service)
 								fout.close()
-							p = subprocess.Popen(['sudo', 'mv', 'sickrage.service', '/etc/systemd/system/sickrage.service'])
+							p = subprocess.Popen(['sudo', 'mv', sr_service, '/etc/systemd/system/' + sr_service])
 							p.wait()
 							if p.returncode == 0:
 								p = subprocess.Popen(['sudo', 'systemctl', 'daemon-reload'])
 								p.wait()
 								if p.returncode == 0:
-									p = subprocess.Popen(['sudo', 'systemctl', 'start', 'sickrage.service'])
+									p = subprocess.Popen(['sudo', 'systemctl', 'start', sr_service])
 									p.wait()
 									if p.returncode == 0:
-										p = subprocess.Popen(['sudo', 'systemctl', 'enable', 'sickrage.service'])
+										p = subprocess.Popen(['sudo', 'systemctl', 'enable', sr_service])
 										p.wait()
 										if p.returncode == 0:
 											return True
@@ -175,6 +186,36 @@ def do_sickrage():
 		else: sys.exit('Error: unable to install unrar')
 	else: sys.exit('Error: unable to install git-core')
 	
-#def do_couchpotato():
+def do_couchpotato(cp_repo, cp_path):
+	p = subprocess.Popen(['sudo', 'git', 'clone', cp_repo, cp_path])
+	p.wait()
+	if p.returncode == 0:
+		p = subprocess.Popen(['sudo', 'chown', '-R', 'osmc:osmc', cp_path])
+		p.wait()
+		if p.returncode == 0:
+			cp_service = 'couchpotato.service'
+			with open(cp_service, 'w') as fout:
+				fout.write(cp_service)
+				fout.close()
+			p = subprocess.Popen(['sudo', 'mv', cp_service, '/etc/systemd/system/' + cp_service])
+			p.wait()
+			if p.returncode == 0:
+				p = subprocess.Popen(['sudo', 'systemctl', 'daemon-reload'])
+				p.wait()
+				if p.returncode == 0:
+					p = subprocess.Popen(['sudo', 'systemctl', 'start', cp_service])
+					p.wait()
+					if p.returncode == 0:
+						p = subprocess.Popen(['sudo', 'systemctl', 'enable', cp_service])
+						p.wait()
+						if p.returncode == 0:
+							return True
+						else: sys.exit('Error: unable to enable couchpotato at startup')
+					else: sys.exit('Error: unable to start couchpotato service')
+				else: sys.exit('Error: unable to reload service')
+			else: sys.exit('Error: unable to create couchpotato.service')
+		else: sys.exit('Error: unable to create couchpotato.service')
+	else: sys.exit('Error: unable to clone CouchPotato repo')
+
 
 if __name__ == "__main__":main()
