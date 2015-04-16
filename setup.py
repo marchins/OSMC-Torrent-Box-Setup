@@ -8,17 +8,12 @@ import subprocess
 from tempfile import mkstemp
 import re
 
-transmission_username = None
-transmission_password = None
-download_dir = None
-incomplete_dir = None
-
 unrar_pkg = 'unrar_5.2.6-1_armhf.deb'
 unrar_url = 'http://sourceforge.net/projects/bananapi/files/' + unrar_pkg
 
 sr_repo = 'https://github.com/SiCKRAGETV/SickRage.git'
 sr_path = '/opt/sickrage'
-sr_service = """[Unit]
+sr_service_content = """[Unit]
 Description=Sickrage daemon
 
 [Service]
@@ -31,7 +26,10 @@ WantedBy=default.target
 
 cp_repo = 'http://github.com/RuudBurger/CouchPotatoServer'
 cp_path = '/opt/CouchPotato'
-cp_service = """[Unit]
+cp_service_content = """[Unit]
+Description=CouchPotato daemon
+
+[Service]
 ExecStart=/usr/bin/python /opt/CouchPotato/CouchPotato.py
 Restart=always
 
@@ -39,16 +37,10 @@ Restart=always
 WantedBy=default.target
 """
 
-
 def main():
 	# if not root...kick out
 	if not os.geteuid()==0:
 	    	sys.exit("\nYou must be root to run this application, please use sudo and try again.\n")
-
-	global transmission_username
-	global transmission_password
-	global incomplete_dir
-	global download_dir
 
 	transmission_username = raw_input("Enter Transmission username: ")
 	transmission_password = raw_input("Enter Transmission password: ")
@@ -59,7 +51,8 @@ def main():
         if p.returncode == 0:
 		if do_transmission(transmission_username, transmission_password, download_dir, incomplete_dir):
 			if do_sickrage(unrar_url, unrar_pkg, sr_repo, sr_path):
-				do_couchpotato(cp_repo, cp_path)
+				if do_couchpotato(cp_repo, cp_path):
+					print 'Installation complete!'
 
 def validate_path(path):
 	#check whether the directory exists or not and if i have write permissions
@@ -159,8 +152,8 @@ def do_sickrage(unrar_url, unrar_pkg, sr_repo, sr_path):
 						p.wait()
 						if p.returncode == 0:
 							sr_service = 'sickrage.service'
-							with open(fname, 'w') as fout:
-								fout.write(sr_service)
+							with open(sr_service, 'w') as fout:
+								fout.write(sr_service_content)
 								fout.close()
 							p = subprocess.Popen(['sudo', 'mv', sr_service, '/etc/systemd/system/' + sr_service])
 							p.wait()
@@ -195,7 +188,7 @@ def do_couchpotato(cp_repo, cp_path):
 		if p.returncode == 0:
 			cp_service = 'couchpotato.service'
 			with open(cp_service, 'w') as fout:
-				fout.write(cp_service)
+				fout.write(cp_service_content)
 				fout.close()
 			p = subprocess.Popen(['sudo', 'mv', cp_service, '/etc/systemd/system/' + cp_service])
 			p.wait()
