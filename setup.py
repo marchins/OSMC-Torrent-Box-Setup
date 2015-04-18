@@ -42,14 +42,14 @@ def main():
 	if not os.geteuid()==0:
 	    	sys.exit("\nYou must be root to run this application, please use sudo and try again.\n")
 
-	transmission_username = raw_input("Enter Transmission username: ")
-	transmission_password = raw_input("Enter Transmission password: ")
+	tr_usr = raw_input("Enter Transmission username: ")
+	tr_pwd = raw_input("Enter Transmission password: ")
 	download_dir = raw_input("Enter download dir absolute path (Usually /home/osmc/Downloads): ")
 	incomplete_dir = raw_input("Enter incomplete dir absolute path (Usually /home/osmc/Incomplete): ")
 	p = subprocess.Popen(['sudo', 'apt-get', 'update'])
         p.wait()
         if p.returncode == 0:
-		if do_transmission(transmission_username, transmission_password, download_dir, incomplete_dir):
+		if do_transmission(tr_usr, tr_pwd, download_dir, incomplete_dir):
 			if do_sickrage(unrar_url, unrar_pkg, sr_repo, sr_path):
 				if do_couchpotato(cp_repo, cp_path):
 					print 'Installation complete!'
@@ -70,6 +70,7 @@ def create_dir(path):
 	os.chown(path, uid, gid)
 	os.chmod(path, 511)
 
+#TODO: use only one replace method with regex
 def replace(file_path, pattern, subst):
 	fh, abs_path = mkstemp()
 	with open(abs_path, 'w') as new_file:
@@ -90,6 +91,11 @@ def replace_regex(file_path, pattern, subst):
 	os.close(fh)
 	os.remove(file_path)
 	shutil.move(abs_path, file_path)
+
+#def rollback():
+	# sudo rm -rf download_dir
+	# sudo rm -rf incomplete_dir
+	# sudo rm 
 
 def do_transmission(username, password, download, incomplete):
 	p = subprocess.Popen(['sudo', 'apt-get', 'install', 'transmission-daemon', '-y'])
