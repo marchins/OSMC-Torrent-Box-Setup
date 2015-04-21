@@ -55,16 +55,15 @@ def main():
 					print 'Installation complete!'
 
 def validate_path(path):
-	#check whether the directory exists or not and if i have write permissions
-	if os.path.isdir(path):
-		sys.exit("Error: " + path + " already exists")
-	elif os.access(os.path.dirname(path), os.W_OK):
-		return True
-	else: sys.exit("Error: " + path + " already exists") 
+	norm_path = os.path.normpath(path)
+	return os.path.isabs(norm_path) 
 
 def create_dir(path):
-	#create the actual directories
-	os.makedirs(path)
+	if not os.path.exists(path):
+		os.makedirs(path)
+	elif not os.access(os.path.dirname(path), os.W_OK):
+		sys.exit("Error: unable to create directory " + path);
+	
 	uid = pwd.getpwnam("debian-transmission").pw_uid
 	gid = grp.getgrnam("debian-transmission").gr_gid
 	os.chown(path, uid, gid)
