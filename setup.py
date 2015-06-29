@@ -64,10 +64,19 @@ def create_dir(path):
 	elif not os.access(os.path.dirname(path), os.W_OK):
 		sys.exit("Error: unable to create directory " + path);
 	
-	uid = pwd.getpwnam("debian-transmission").pw_uid
-	gid = grp.getgrnam("debian-transmission").gr_gid
-	os.chown(path, uid, gid)
-	os.chmod(path, 511)
+def chmod(path, chmod_number):
+	if not os.path.exists(path):
+		sys.exit("Error: file not found. Unable to chown " + path)
+	else:
+		os.chmod(path, chmod_number)
+
+def chown(path, uid_name, gid_name):
+	if not os.path.exists(path):
+		sys.exit("Error: file not found. Unable to chmod " + path)
+	else:
+		uid = pwd.getpwnam(uid_name).pw_uid
+		gid = grp.getgrnam(gid_name).gr_gid
+		os.chown(path, uid, gid)
 
 #TODO: use only one replace method with regex
 def replace(file_path, pattern, subst):
@@ -91,11 +100,6 @@ def replace_regex(file_path, pattern, subst):
 	os.remove(file_path)
 	shutil.move(abs_path, file_path)
 
-#def rollback():
-	# sudo rm -rf download_dir
-	# sudo rm -rf incomplete_dir
-	# sudo rm 
-
 def do_transmission(username, password, download, incomplete):
 	p = subprocess.Popen(['sudo', 'apt-get', 'install', 'transmission-daemon', '-y'])
 	p.wait()
@@ -105,9 +109,13 @@ def do_transmission(username, password, download, incomplete):
 		if p2.returncode == 0:
 			if validate_path(download):
 				create_dir(download)
+				chown(download, "debian-transmission", "debian-transmission")
+				chmod(download, 511)
 			else: sys.exit("Download path not valid!")
 			if validate_path(incomplete):
 				create_dir(incomplete)
+				chown(incomplete, "debian-transmission", "debian-transmission")
+				chmod(incomplete, 511)
 			else: sys.exit("Incomplete path not valid!")
 			file_path = '/etc/transmission-daemon/settings.json'
 			shutil.copyfile(file_path,file_path + '.orig')
