@@ -7,7 +7,3 @@ USAGE:
 
 2. sudo python setup.py
 
-TODO:
-- clean user inputs
-- better handling of errors
-- rollback
