@@ -46,13 +46,16 @@ def main():
 	tr_pwd = raw_input("Enter Transmission password: ")
 	download_dir = raw_input("Enter download dir absolute path (Usually /home/osmc/Downloads): ")
 	incomplete_dir = raw_input("Enter incomplete dir absolute path (Usually /home/osmc/Incomplete): ")
+	install_couchpotato = raw_input("Do you want to install couchpotato ('yes' or 'y' to confirm) ? ");
 	p = subprocess.Popen(['sudo', 'apt-get', 'update'])
         p.wait()
         if p.returncode == 0:
 		if do_transmission(tr_usr, tr_pwd, download_dir, incomplete_dir):
 			if do_sickrage(unrar_url, unrar_pkg, sr_repo, sr_path):
-				if do_couchpotato(cp_repo, cp_path):
-					print 'Installation complete!'
+				if install_couchpotato in ['y', 'Y', 'yes', 'Yes', 'YES']:
+					if do_couchpotato(cp_repo, cp_path):
+						print 'Installation complete!'
+				else print 'Installation complete!'
 
 def validate_path(path):
 	norm_path = os.path.normpath(path)
