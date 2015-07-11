@@ -67,6 +67,7 @@ def create_dir(path):
 	elif not os.access(os.path.dirname(path), os.W_OK):
 		sys.exit("Error: unable to create directory " + path);
 	
+	#TODO: permissions in separate method
 	uid = pwd.getpwnam("debian-transmission").pw_uid
 	gid = grp.getgrnam("debian-transmission").gr_gid
 	os.chown(path, uid, gid)
@@ -217,6 +218,15 @@ def do_couchpotato(cp_repo, cp_path):
 			else: sys.exit('Error: unable to create couchpotato.service')
 		else: sys.exit('Error: unable to create couchpotato.service')
 	else: sys.exit('Error: unable to clone CouchPotato repo')
+
+def do_mysql():
+	p = subprocess.Popen(['sudo','apt-get','install','mysql-server-5.5'])
+	p.wait()
+	if p.returncode == 0:
+		file_path = '/etc/mysql/my.cnf'
+		shutil.copyfile(file_path,file_path + '.orig')
+		replace_regex(file_path, 'bind-address', '#bind-address')
+		#TODO: mysql -u root -p
 
 
 if __name__ == "__main__":main()
