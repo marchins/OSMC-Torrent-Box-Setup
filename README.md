@@ -1,4 +1,4 @@
-# osmc-auto-setup
+# RPi-osmc-auto-setup
 This is a script for Raspberry Pi version of OSMC that installs Transmission, SickRage, CouchPotato and MySQL (if you have other instances of OSMC on you network and you want to share the library)
 
 USAGE:
