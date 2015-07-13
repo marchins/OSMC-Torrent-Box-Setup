@@ -9,6 +9,7 @@ from tempfile import mkstemp
 from uuid import UUID
 import re
 import MySQLdb
+import netifaces as ni
 
 unrar_pkg = 'unrar_5.2.6-1_armhf.deb'
 unrar_url = 'http://sourceforge.net/projects/bananapi/files/' + unrar_pkg
@@ -37,6 +38,21 @@ Restart=always
 
 [Install]
 WantedBy=default.target
+"""
+
+advancedsettings_base = """<advancedsettings>
+	<videodatabase>
+		<type>mysql</type>
+		<host>{}</host>
+		<port>3306</port>
+		<user>kodi</user>
+		<pass>kodi</pass>
+	</videodatabase>
+	<videolibrary>
+		<importwatchedstate>true</importwatchedstate>
+		<importresumepoint>true</importresumepoint>
+	</videolibrary>
+</advancedsettings>
 """
 
 def main():
@@ -313,10 +329,18 @@ def do_mysql():
 			con = MySQLdb.connect('localhost', 'root', mysql_pwd.replace(" ",""))
 			with con:
 				cur = con.cursor()
-				cur.execute("CREATE USER 'kodi' IDENTIFIED BY 'kodi'")
+				#cur.execute("CREATE USER 'kodi' IDENTIFIED BY 'kodi'")
 				cur.execute("GRANT ALL ON *.* TO 'kodi'")
-				#TODO advancedsettings.xml in .kodi/userdata
-				return True
+				ni.ifaddresses('eth0')
+				ip = ni.ifaddresses('eth0')[2][0]['addr']
+				advancedsettings = advancedsettings_base.format(ip)
+				with open('advancedsettings.xml', 'w') as fout:
+					fout.write(advancedsettings)
+					fout.close()
+				p = subprocess.Popen(['sudo', 'mv', 'advancedsettings.xml', '/home/osmc/.kodi/userdata/' + 'advancedsettings.xml'])
+				p.wait()
+				if p.returncode == 0:
+					return True
 	return False
 
 
