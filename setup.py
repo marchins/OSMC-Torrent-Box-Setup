@@ -6,16 +6,12 @@ import sys
 import shutil
 import subprocess
 from tempfile import mkstemp
+from uuid import UUID
 import re
 import MySQLdb
 
 unrar_pkg = 'unrar_5.2.6-1_armhf.deb'
 unrar_url = 'http://sourceforge.net/projects/bananapi/files/' + unrar_pkg
-
-tr_usr = "osmc"
-tr_pwd = "osmc"
-download_dir = "/home/osmc/Downloads"
-incomplete_dir = "/home/osmc/Incomplete"
 
 sr_repo = 'https://github.com/SiCKRAGETV/SickRage.git'
 sr_path = '/opt/sickrage'
@@ -44,30 +40,50 @@ WantedBy=default.target
 """
 
 def main():
+
+	tr_usr = "osmc"
+	tr_pwd = "osmc"
+	download_dir = "/home/osmc/Downloads"
+	incomplete_dir = "/home/osmc/Incomplete"
+	media_dir_base = "/mnt/"
+	media_dir = "media"
+
 	# if not root...kick out
 	if not os.geteuid()==0:
 		sys.exit("\nYou must be root to run this application, please use sudo and try again.\n")
 
-	mount_drive = raw_input("Do you want to mount an external drive (Y/N) ?")
-	if mount_drive in ['y', 'Y', 'yes', 'Yes', 'YES']:
+	mount_drive = raw_input("Do you want to mount an external drive (Y/N)? ")
+	if mount_drive.strip() in ['y', 'Y', 'yes', 'Yes', 'YES']:
+		mount_label = raw_input("Enter directory name (default is media): ")
+		if len(mount_label.strip()) > 0:
+			media_dir = mount_label.replace("/","")
 		proceed = raw_input("Please connect your external drive and then press enter")
 		p = subprocess.Popen(['sudo','blkid'])
 		p.wait()
 		if p.returncode == 0:
-			uuid = raw_input("Please enter the UUID of your external drive: ")
-			uuid_mount = 'UUID='+ uuid +'	/mnt/media	ext4	defaults,noatime	0	0'
-			print 'This line will be added in /etc/fstab: ' + uuid_mount
-			confirm = raw_input("Confirm?")
-			if confirm in ['y', 'Y', 'yes', 'Yes', 'YES']:
-				with open('/etc/fstab', 'a') as fstab:
-					fstab.write(uuid_mount)
-					fstab.close()
-				p = subprocess.Popen(['sudo','automount'])
-				p.wait()
-				if p.returncode == 0:
-					print 'Drive mounted!'
-					print '---------------------'
-			else 'Mounting aborted.'
+			uuid = raw_input("Enter the UUID of your external drive: ")
+			if len(uuid.replace("\"","").strip()) == 36:
+				#TODO: check format type automatically
+				format = raw_input("Enter your disk format type (ext3, ext4, vfat, ntfs): ")
+				format.strip()
+				media_path = media_dir_base + media_dir
+				create_dir(media_path)
+				uuid_mount = 'UUID=' + uuid + '  ' + media_path + '  ' + format + '  defaults,noatime  0  0'
+				confirm = raw_input("This line will be added in /etc/fstab: '" + uuid_mount + "' - Confirm? (Y/N): ")
+				if confirm in ['y', 'Y', 'yes', 'Yes', 'YES']:
+					with open('/etc/fstab', 'a') as fstab:
+						fstab.write(uuid_mount)
+						fstab.close()
+					p = subprocess.Popen(['sudo','mount','-a'])
+					p.wait()
+					if p.returncode == 0:
+						p = subprocess.Popen(['sudo','blkid'])
+						p.wait()
+						if p.returncode == 0:
+							print 'Drive mounted!'
+							print '---------------------'
+				else: print 'Mounting aborted.'
+			else: print 'Error: UUID provided is not valid. Mounting aborted.'
 
 	install_transmission = raw_input("Do you want to install Transmission (Y/N) ? ")
 	install_sickrage = raw_input("Do you want to install SickRage (Y/N) ? ")
@@ -77,49 +93,48 @@ def main():
 	p = subprocess.Popen(['sudo', 'apt-get', 'update'])
 	p.wait()
 	if p.returncode == 0:
-		if install_transmission in ['y', 'Y', 'yes', 'Yes', 'YES']:
+		if install_transmission.strip() in ['y', 'Y', 'yes', 'Yes', 'YES']:
 			tr_usr_input = raw_input("Enter Transmission username (Default: 'osmc') : ")
-			tr_pwd_input = raw_input("Enter Transmission password: ")
+			tr_pwd_input = raw_input("Enter Transmission password (Default: 'osmc') : ")
 			download_dir_input = raw_input("Enter download dir absolute path (Default: /home/osmc/Downloads): ")
 			incomplete_dir_input = raw_input("Enter incomplete dir absolute path (Default: /home/osmc/Incomplete): ")
 
-			if len(tr_usr_input) > 1
+			if len(tr_usr_input.strip()) > 1:
 				tr_usr = tr_usr_input
-			if len(tr_pwd_input) > 1
+			if len(tr_pwd_input.strip()) > 1:
 				tr_pwd = tr_pwd_input
-			if len(download_dir_input) > 1
+			if len(download_dir_input.strip()) > 1:
 				download_dir = download_dir_input
-			if len(incomplete_dir_input) > 1
+			if len(incomplete_dir_input.strip()) > 1:
 				incomplete_dir = incomplete_dir_input
 
 			if do_transmission(tr_usr, tr_pwd, download_dir, incomplete_dir):
 				print 'Transmission installed!'
-		if install_sickrage in ['y', 'Y', 'yes', 'Yes', 'YES']:
+		if install_sickrage.strip() in ['y', 'Y', 'yes', 'Yes', 'YES']:
 			if do_sickrage(unrar_url, unrar_pkg, sr_repo, sr_path):
 				print 'SickRage installed!'
-		if install_couchpotato in ['y', 'Y', 'yes', 'Yes', 'YES']:
+		if install_couchpotato.strip() in ['y', 'Y', 'yes', 'Yes', 'YES']:
 			if do_couchpotato(cp_repo, cp_path):
 				print 'CouchPotato installed!'
-		if install_mysql in ['y', 'Y', 'yes', 'Yes', 'YES']:
+		if install_mysql.strip() in ['y', 'Y', 'yes', 'Yes', 'YES']:
 			if do_mysql():
 				print 'MySql installed!'
+			else: print 'Error during MySql configuration'
 		print 'Installation complete!'
 
-def validate_path(path):
-	norm_path = os.path.normpath(path)
-	return os.path.isabs(norm_path) 
-
-def create_dir(path, pwnam, grnam, permission):
+def create_dir(path):
 	if not os.path.exists(path):
 		os.makedirs(path)
 	elif not os.access(os.path.dirname(path), os.W_OK):
 		sys.exit("Error: unable to create directory " + path);
-	
-	#TODO: permissions in separate method
-	uid = pwd.getpwnam("debian-transmission").pw_uid
-	gid = grp.getgrnam("debian-transmission").gr_gid
+
+def chown_dir(path, user, group):
+	uid = pwd.getpwnam(user).pw_uid
+	gid = grp.getgrnam(group).gr_gid
 	os.chown(path, uid, gid)
-	os.chmod(path, 511)
+
+def chmod_dir(path, permissions):
+	os.chmod(path, permissions)
 
 #TODO: use only one replace method with regex
 def replace(file_path, pattern, subst):
@@ -143,6 +158,23 @@ def replace_regex(file_path, pattern, subst):
 	os.remove(file_path)
 	shutil.move(abs_path, file_path)
 
+def validate_path(path):
+	norm_path = os.path.normpath(path)
+	return os.path.isabs(norm_path) 
+
+'''
+def get_fs_type(mypath):
+	root_type = ""
+	for part in psutil.disk_partitions():
+		if part.mountpoint == '/':
+			root_type = part.fstype
+			continue
+
+		if mypath.startswith(part.mountpoint):
+			return part.fstype
+	return root_type
+'''
+
 def do_transmission(username, password, download, incomplete):
 	p = subprocess.Popen(['sudo', 'apt-get', 'install', 'transmission-daemon', '-y'])
 	p.wait()
@@ -151,10 +183,14 @@ def do_transmission(username, password, download, incomplete):
 		p2.wait()
 		if p2.returncode == 0:
 			if validate_path(download):
-				create_dir(download, "debian-transmission", "debian-transmission", 511)
+				create_dir(download)
+				chown_dir(download, "debian-transmission", "debian-transmission")
+				chmod_dir(download, 511)
 			else: sys.exit("Download path not valid!")
 			if validate_path(incomplete):
-				create_dir(incomplete, "debian-transmission", "debian-transmission", 511)
+				create_dir(incomplete)
+				chown_dir(incomplete, "debian-transmission", "debian-transmission")
+				chmod_dir(incomplete, 511)
 			else: sys.exit("Incomplete path not valid!")
 			file_path = '/etc/transmission-daemon/settings.json'
 			shutil.copyfile(file_path,file_path + '.orig')
@@ -187,7 +223,7 @@ def do_transmission(username, password, download, incomplete):
 def do_sickrage(unrar_url, unrar_pkg, sr_repo, sr_path):
 	p = subprocess.Popen(['sudo', 'apt-get', 'install', 'python-cheetah', 'git-core', '-y'])
 	p.wait()
-		if p.returncode == 0:
+	if p.returncode == 0:
 		p = subprocess.Popen(['wget', unrar_url])
 		p.wait()
 		if p.returncode == 0:
@@ -273,8 +309,15 @@ def do_mysql():
 		p.wait()
 		if p.returncode == 0:	
 			print 'MySql service restarted'
-			#TODO: create user kodi in mysql and grant privileges
-			return True
+			mysql_pwd = raw_input("Enter mysql password for root user: ")
+			con = MySQLdb.connect('localhost', 'root', mysql_pwd.replace(" ",""))
+			with con:
+				cur = con.cursor()
+				cur.execute("CREATE USER 'kodi' IDENTIFIED BY 'kodi'")
+				cur.execute("GRANT ALL ON *.* TO 'kodi'")
+				#TODO advancedsettings.xml in .kodi/userdata
+				return True
+	return False
 
 
 if __name__ == "__main__":main()
