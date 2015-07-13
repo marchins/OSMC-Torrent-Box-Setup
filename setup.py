@@ -145,12 +145,18 @@ def create_dir(path):
 		sys.exit("Error: unable to create directory " + path);
 
 def chown_dir(path, user, group):
-	uid = pwd.getpwnam(user).pw_uid
-	gid = grp.getgrnam(group).gr_gid
-	os.chown(path, uid, gid)
+	if not os.path.exists(path):
+		sys.exit("Error: file not found. Unable to chmod " + path)
+	else:
+		uid = pwd.getpwnam(user).pw_uid
+		gid = grp.getgrnam(group).gr_gid
+		os.chown(path, uid, gid)
 
 def chmod_dir(path, permissions):
-	os.chmod(path, permissions)
+	if not os.path.exists(path):
+		sys.exit("Error: file not found. Unable to chown " + path)
+	else:
+		os.chmod(path, permissions)
 
 #TODO: use only one replace method with regex
 def replace(file_path, pattern, subst):
