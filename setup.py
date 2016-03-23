@@ -14,7 +14,7 @@ import netifaces as ni
 unrar_pkg = 'unrar_5.2.6-1_armhf.deb'
 unrar_url = 'http://sourceforge.net/projects/bananapi/files/' + unrar_pkg
 
-sr_repo = 'https://github.com/SiCKRAGETV/SickRage.git'
+sr_repo = 'https://github.com/SickRage/SickRage.git'
 sr_path = '/opt/sickrage'
 sr_service_content = """[Unit]
 Description=Sickrage daemon
