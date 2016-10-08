@@ -5,6 +5,7 @@ USAGE:
 
 1. sudo apt-get install python-mysqldb
 2. sudo apt-get install python-netifaces
-3. wget http://marchins.github.io/osmc-auto-setup/setup.py
-4. sudo python setup.py
+3. sudo apt-get install git
+4. git clone https://github.com/marchins/RPi-osmc-auto-setup.git
+5. sudo python setup.py
 
